@@ -22,6 +22,19 @@ app.get("/api/product/:productid", async (req, res) => {
         res.status(500).json({ message: "Error fetching part", error: err });
     }
 });
+app.get("/api/product/:productid", async (req, res) => {
+  const id = req.params.productid;
+  try {
+      const product = await Product.find({_id: id }, {});
+      if (product) {
+          res.status(200).json(product);
+      } else {
+          res.status(404).json({ message: "Part is not available" });
+      }
+  } catch (err) {
+      res.status(500).json({ message: "Error fetching part", error: err });
+  }
+});
 
 // Placeholder route for /product (returns empty object)
 app.get("/api/product", async (req, res) => {
@@ -79,7 +92,7 @@ app.post("/api/product-list", async (req, res) => {
     // Find matching products in the database by name
     const matchingProducts = await Product.find({
       $or: regexQueries        // Use $or to match any of the names
-    }, { _id: 1, name: 1 });
+    }, { _id: 1, name: 1 ,image_url:1});
 
     // Construct the response with product details and URLs
     const result = matchingProducts
@@ -87,6 +100,7 @@ app.post("/api/product-list", async (req, res) => {
         name: prod.name,
         id: prod._id,
         url: `http://localhost:${port}/product/${prod._id}`,
+        image:prod.image_url,
       }))
       .filter((value, index, self) => 
         index === self.findIndex((t) => (
@@ -131,6 +145,60 @@ app.post("/api/product-list", async (req, res) => {
 //     });
 //   }
 // });
+
+app.post("/api/product-list", async (req, res) => {
+  try {
+    const { names } = req.body;
+
+    // Validate input: Ensure names is an array and not empty
+    if (!Array.isArray(names) || names.length === 0) {
+      return res.status(400).json({ message: "Please pass an array of names" });
+    }
+
+    // Remove duplicate product names from the array
+    const uniqueNames = [...new Set(names)];
+
+    // Use MongoDB Atlas Search for text matching
+    const matchingProducts = await Product.aggregate([
+      {
+        $search: {
+          index: "default", // Replace with your Atlas Search index name if different
+          compound: {
+            should: uniqueNames.map(name => ({
+              text: {
+                query: name,
+                path: "name",
+                fuzzy: { maxEdits: 2 }, // Optional: Enables fuzzy matching (e.g., handling typos)
+              },
+            })),
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+        },
+      },
+    ]);
+
+    // Construct the response with product details and URLs
+    const result = matchingProducts.map((prod) => ({
+      name: prod.name,
+      id: prod._id,
+      url: `http://localhost:${port}/product/${prod._id}`,
+    }));
+
+    return res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching product links",
+      error: err.message,
+    });
+  }
+});
+
 
 
 app.delete("/api/product/:id", async (req, res) => {
@@ -205,6 +273,49 @@ app.put("/api/product/:id", async (req, res) => {
       });
     }
   });
+  app.get("/api/search", async (req, res) => {
+    try {
+      const { query } = req.query; // Get the search query from the request
+      
+      if (!query || query.trim().length === 0) {
+        return res.status(400).json({ success: false, message: "Please provide a search query" });
+      }
+  
+      // Perform the Atlas Search query
+      const results = await Product.aggregate([
+        {
+          $search: {
+            index: 'default', // This should match the name of your Atlas Search index
+            text: {
+              query: query,     // Query the search string
+              path: 'name',     // Specify the field you want to search (e.g., 'name')
+              fuzzy: {          // Optional fuzzy search for typos
+                maxEdits: 2,
+                prefixLength: 3
+              }
+            }
+          }
+        },
+        {
+          $project: {          // Optional: Customize the response
+            _id: 1,
+            name: 1,
+            description: 1,
+            price: 1
+          }
+        }
+      ]);
+  
+      if (results.length > 0) {
+        return res.status(200).json({ success: true, data: results });
+      } else {
+        return res.status(404).json({ success: false, message: "No products found" });
+      }
+    } catch (error) {
+      return res.status(500).json({ success: false, message: "Error performing search", error: error.message });
+    }
+  });
+  
   
 
 // Start the server

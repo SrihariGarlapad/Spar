@@ -5,6 +5,7 @@ import { Route, Routes } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import Navbar from "./components/Navbar";
 import ProductDetails from "./store/productDetails";
+import Searchdetails from "./store/searchdetails";
 
 function App() {
 	return (
@@ -15,6 +16,7 @@ function App() {
 				<Route path='/' element={<HomePage />} />
 				{/* /* <Route path='/create' element={<CreatePage />} /> */ }
 				<Route path="/product/:id" element={<ProductDetails />}/>
+				<Route path="/search/" element={<Searchdetails/>}/>
 			</Routes>
 		</Box>
 	);
