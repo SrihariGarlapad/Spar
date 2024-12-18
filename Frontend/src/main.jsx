@@ -19,7 +19,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import { ChakraProvider, ColorModeScript } from "@chakra-ui/react";
 import { BrowserRouter } from "react-router-dom";
-import theme from "D:/Spareparts/frontend/src/components/theme.js"; // Import your custom theme
+import theme from "./components/theme.js"; // Import your custom theme
 
 ReactDOM.createRoot(document.getElementById("root")).render(
 	<React.StrictMode>

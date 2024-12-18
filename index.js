@@ -99,7 +99,7 @@ app.post("/api/product-list", async (req, res) => {
       .map((prod) => ({
         name: prod.name,
         id: prod._id,
-        url: `http://localhost:${port}/product/${prod._id}`,
+        url: `http://localhost:5173/product/${prod._id}`,
         image:prod.image_url,
       }))
       .filter((value, index, self) => 
@@ -146,58 +146,58 @@ app.post("/api/product-list", async (req, res) => {
 //   }
 // });
 
-app.post("/api/product-list", async (req, res) => {
-  try {
-    const { names } = req.body;
+// app.post("/api/product-list", async (req, res) => {
+//   try {
+//     const { names } = req.body;
 
-    // Validate input: Ensure names is an array and not empty
-    if (!Array.isArray(names) || names.length === 0) {
-      return res.status(400).json({ message: "Please pass an array of names" });
-    }
+//     // Validate input: Ensure names is an array and not empty
+//     if (!Array.isArray(names) || names.length === 0) {
+//       return res.status(400).json({ message: "Please pass an array of names" });
+//     }
 
-    // Remove duplicate product names from the array
-    const uniqueNames = [...new Set(names)];
+//     // Remove duplicate product names from the array
+//     const uniqueNames = [...new Set(names)];
 
-    // Use MongoDB Atlas Search for text matching
-    const matchingProducts = await Product.aggregate([
-      {
-        $search: {
-          index: "default", // Replace with your Atlas Search index name if different
-          compound: {
-            should: uniqueNames.map(name => ({
-              text: {
-                query: name,
-                path: "name",
-                fuzzy: { maxEdits: 2 }, // Optional: Enables fuzzy matching (e.g., handling typos)
-              },
-            })),
-          },
-        },
-      },
-      {
-        $project: {
-          _id: 1,
-          name: 1,
-        },
-      },
-    ]);
+//     // Use MongoDB Atlas Search for text matching
+//     const matchingProducts = await Product.aggregate([
+//       {
+//         $search: {
+//           index: "default", // Replace with your Atlas Search index name if different
+//           compound: {
+//             should: uniqueNames.map(name => ({
+//               text: {
+//                 query: name,
+//                 path: "name",
+//                 fuzzy: { maxEdits: 2 }, // Optional: Enables fuzzy matching (e.g., handling typos)
+//               },
+//             })),
+//           },
+//         },
+//       },
+//       {
+//         $project: {
+//           _id: 1,
+//           name: 1,
+//         },
+//       },
+//     ]);
 
-    // Construct the response with product details and URLs
-    const result = matchingProducts.map((prod) => ({
-      name: prod.name,
-      id: prod._id,
-      url: `http://localhost:${port}/product/${prod._id}`,
-    }));
+//     // Construct the response with product details and URLs
+//     const result = matchingProducts.map((prod) => ({
+//       name: prod.name,
+//       id: prod._id,
+//       url: `http://localhost:${port}/product/${prod._id}`,
+//     }));
 
-    return res.status(200).json({ success: true, data: result });
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: "Error fetching product links",
-      error: err.message,
-    });
-  }
-});
+//     return res.status(200).json({ success: true, data: result });
+//   } catch (err) {
+//     return res.status(500).json({
+//       success: false,
+//       message: "Error fetching product links",
+//       error: err.message,
+//     });
+//   }
+// });
 
 
 

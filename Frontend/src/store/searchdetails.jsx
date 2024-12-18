@@ -10,11 +10,13 @@ import {
   Stack,
   Image,
   useColorModeValue,
+  Spinner,
 } from "@chakra-ui/react";
 
 const SearchResultsPage = () => {
   const location = useLocation(); // To access the search query from the URL
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false); // Track loading state
   const [error, setError] = useState(null);
 
   // Extract query from the URL
@@ -29,6 +31,8 @@ const SearchResultsPage = () => {
   useEffect(() => {
     // Fetch products based on the search query
     const fetchProducts = async () => {
+      setLoading(true);
+      setError(null); // Reset errors on each fetch
       try {
         const response = await fetch("http://localhost:5000/api/product-list", {
           method: "POST",
@@ -43,13 +47,15 @@ const SearchResultsPage = () => {
           if (data.success && data.data.length > 0) {
             setProducts(data.data);
           } else {
-            setError("No products found.");
+            setProducts([]); // No products found, but no error
           }
         } else {
           setError("Failed to fetch products.");
         }
       } catch (error) {
         setError("An error occurred while fetching the products.");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -57,13 +63,24 @@ const SearchResultsPage = () => {
       fetchProducts();
     } else {
       setError("Search query is missing.");
+      setProducts([]); // Clear products if query is missing
     }
   }, [searchQuery]);
 
   return (
     <Box p={0} m={0} minHeight="100vh" mt={50}>
-      {error ? (
-        <Text color="red.500">{error}</Text>
+      {loading ? (
+        <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+          <Spinner size="xl" />
+        </Box>
+      ) : error ? (
+        <Text color="red.500" textAlign="center">
+          {error}
+        </Text>
+      ) : products.length === 0 ? (
+        <Text textAlign="center" color="gray.500" fontSize="lg">
+          No products found.
+        </Text>
       ) : (
         <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={6}>
           {products.map((product) => (
