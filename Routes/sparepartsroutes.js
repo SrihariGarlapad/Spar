@@ -47,33 +47,162 @@ router.post("/products", async (req, res) => {
     }
 });
 
-// Search for products by a list of names
+
+// router.post("/product-list", async (req, res) => {
+//     try {
+//         const { parts } = req.body;
+
+//         if (!Array.isArray(parts) || parts.length === 0) {
+//             return res.status(400).json({ message: "Please pass an array of parts" });
+//         }
+
+//         const uniqueparts = [...new Set(parts)];
+//         const regexQueries = uniqueparts.map(name => ({
+//             name: { $regex: name.replace(/\s+/g, '.*'), $options: 'i' }
+//         }));
+
+//         const matchingProducts = await Product.find({ $or: regexQueries }, { _id: 1, name: 1, image_url: 1 });
+//         const result = matchingProducts.map(prod => ({
+//             name: prod.name,
+//             id: prod._id,
+//             url: `http://localhost:5173/product/${prod._id}`,
+//             image: prod.image_url
+//         }));
+
+//         res.status(200).json({ success: true, data: result });
+//     } catch (err) {
+//         res.status(500).json({ success: false, message: "Error fetching product links", error: err.message });
+//     }
+// });
 router.post("/product-list", async (req, res) => {
     try {
-        const { names } = req.body;
+        const { parts } = req.body;
 
-        if (!Array.isArray(names) || names.length === 0) {
-            return res.status(400).json({ message: "Please pass an array of names" });
+        if (!Array.isArray(parts) || parts.length === 0) {
+            return res.status(400).json({ message: "Please pass an array of parts" });
         }
 
-        const uniqueNames = [...new Set(names)];
-        const regexQueries = uniqueNames.map(name => ({
-            name: { $regex: name.replace(/\s+/g, '.*'), $options: 'i' }
+        // Remove empty or invalid strings from the parts array
+        const validParts = parts.filter(part => typeof part === "string" && part.trim() !== "");
+
+        if (validParts.length === 0) {
+            return res.status(400).json({ message: "Please provide valid part names" });
+        }
+
+        const uniqueparts = [...new Set(validParts)];
+        const regexQueries = uniqueparts.map(name => ({
+            name: { $regex: name.trim().replace(/\s+/g, '.*'), $options: 'i' }
         }));
 
-        const matchingProducts = await Product.find({ $or: regexQueries }, { _id: 1, name: 1, image_url: 1 });
-        const result = matchingProducts.map(prod => ({
-            name: prod.name,
-            id: prod._id,
-            url: `http://localhost:5173/product/${prod._id}`,
-            image: prod.image_url
-        }));
+
+        const matchingProducts = await Product.find(
+            { $or: regexQueries },
+            { _id: 1, name: 1, image_url: 1 }
+        );
+
+        // Debugging: Show matching products
+        // console.log("Matching Products:", matchingProducts);
+
+        // Create a dictionary for quick lookup based on partial name match
+        const productMap = matchingProducts.reduce((map, prod) => {
+            map[prod.name.toLowerCase().trim()] = {
+                name: prod.name,
+                id: prod._id,
+                url: `http://localhost:5173/product/${prod._id}`,
+                image: prod.image_url
+            };
+            return map;
+        }, {});
+
+        // Map over the validParts array to preserve order and do partial matching
+        const result = validParts.map(part => {
+            const key = part.toLowerCase().trim();  // Lowercase and trim the part name
+            
+            // Look for partial matches in the product names
+            const matchedProduct = matchingProducts.find(prod => 
+                prod.name.toLowerCase().includes(key)
+            );
+
+            return matchedProduct ? {
+                name: matchedProduct.name,
+                id: matchedProduct._id,
+                url: `http://localhost:5173/product/${matchedProduct._id}`,
+                image: matchedProduct.image_url
+            } : { name: part, id: null, url: null, image: null };
+        });
 
         res.status(200).json({ success: true, data: result });
     } catch (err) {
         res.status(500).json({ success: false, message: "Error fetching product links", error: err.message });
     }
 });
+
+router.post("/parts-list", async (req, res) => {
+    try {
+        const { parts } = req.body;
+
+        if (!Array.isArray(parts) || parts.length === 0) {
+            return res.status(400).json({ message: "Please pass an array of parts" });
+        }
+
+        // Remove empty or invalid strings from the parts array
+        const validParts = parts.filter(part => typeof part === "string" && part.trim() !== "");
+
+        if (validParts.length === 0) {
+            return res.status(400).json({ message: "Please provide valid part names" });
+        }
+
+        const uniqueparts = [...new Set(validParts)];
+        const regexQueries = uniqueparts.map(name => ({
+            name: { $regex: name.trim().replace(/\s+/g, '.*'), $options: 'i' }
+        }));
+
+
+        const matchingProducts = await Product.find(
+            { $or: regexQueries },
+            { _id: 1, name: 1, image_url: 1 }
+        );
+
+        // Debugging: Show matching products
+        // console.log("Matching Products:", matchingProducts);
+
+        // Create a dictionary for quick lookup based on partial name match
+        const productMap = matchingProducts.reduce((map, prod) => {
+            map[prod.name.toLowerCase().trim()] = {
+                name: prod.name,
+                // id: prod._id,
+                url: `http://localhost:5173/product/${prod._id}`,
+                // image: prod.image_url
+            };
+            return map;
+        }, {});
+
+        // Map over the validParts array to preserve order and do partial matching
+        const result = validParts.map(part => {
+            const key = part.toLowerCase().trim();  // Lowercase and trim the part name
+            
+            // Look for partial matches in the product names
+            const matchedProduct = matchingProducts.find(prod => 
+                prod.name.toLowerCase().includes(key)
+            );
+
+            return matchedProduct ? {
+                name: matchedProduct.name,
+                // id: matchedProduct._id,
+                url: `http://localhost:5173/product/${matchedProduct._id}`,
+                // image: matchedProduct.image_url
+            } : { name: part, id: null, url: null, image: null };
+        });
+
+        res.status(200).json({ success: true, data: result });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Error fetching product links", error: err.message });
+    }
+});
+
+
+
+
 
 // Delete a product
 router.delete("/product/:id", async (req, res) => {

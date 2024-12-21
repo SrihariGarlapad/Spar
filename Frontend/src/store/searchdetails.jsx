@@ -39,7 +39,7 @@ const SearchResultsPage = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ names: [searchQuery] }),
+          body: JSON.stringify({ parts: [searchQuery] }),
         });
 
         if (response.ok) {
